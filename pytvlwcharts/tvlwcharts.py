@@ -254,6 +254,137 @@ _TEMPLATES = jinja2.Template("""
    </script>
 """)
 
+_TEMPLATES_multi = """
+<script type="text/javascript" src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+<!-- Include Lightweight Charts library -->
+<script src="{{ base_url }}lightweight-charts.standalone.production.js"></script>
+
+<!-- Chart Containers -->
+<div id="charts-container">
+  {% for chart in charts %}
+    <div id="chart_div_{{ loop.index0 }}" style="position: relative;"></div>
+  {% endfor %}
+</div>
+
+<!-- Main JavaScript Code -->
+<script type="text/javascript">
+  (() => {
+    const data_url = "{{ data_url }}";
+    console.log('Initializing charts...');
+
+    // Arrays to keep track of charts and series
+    const charts = [];
+    const seriesArray = [];
+
+    {% for chart in charts %}
+    (function() {
+      {% set chart_index = loop.index0 %}
+      // Get the container for this chart
+      const outputDiv = document.getElementById("chart_div_{{ chart_index }}");
+      console.log(`Creating chart in div with id: chart_div_{{ chart_index }}`);
+
+      const chart_{{ chart_index }} = LightweightCharts.createChart(outputDiv, {{ chart.options }});
+      const container = outputDiv;
+
+      // Store the chart in the charts array
+      charts.push(chart_{{ chart_index }});
+
+      // Create legend for this chart
+      const legend = document.createElement('div');
+      legend.style = `position: absolute; left: 10px; top: 10px; z-index: 1; font-size: 10px; font-family: sans-serif; line-height: 14px; font-weight: 200;`;
+      container.appendChild(legend);
+
+      {% for series in chart.series %}
+      (function() {
+        console.log(`Adding series '{{ series.series_name }}' to chart {{ chart_index }}`);
+        // Create legend row for this series
+        const row_{{ chart_index }}_{{ series.series_name }} = document.createElement('div');
+        row_{{ chart_index }}_{{ series.series_name }}.style.color = 'orange';
+        legend.appendChild(row_{{ chart_index }}_{{ series.series_name }});
+
+        // Add series to the chart
+        const chart_series_{{ chart_index }}_{{ series.series_name }} = chart_{{ chart_index }}.add{{ series.series_type }}Series(
+          {{ series.options }}
+        );
+        console.log(`Series '{{ series.series_name }}' added to chart {{ chart_index }}`);
+
+        // Store the main series (assuming the first series is the main series)
+        {% if loop.first %}
+        chart_{{ chart_index }}.mainSeries = chart_series_{{ chart_index }}_{{ series.series_name }};
+        seriesArray.push(chart_{{ chart_index }}.mainSeries);
+        {% endif %}
+
+        chart_series_{{ chart_index }}_{{ series.series_name }}.setData(
+          {{ series.data }}
+        );
+        console.log(`Data set for series '{{ series.series_name }}' on chart {{ chart_index }}`);
+
+        chart_series_{{ chart_index }}_{{ series.series_name }}.setMarkers(
+          {{ series.markers }}
+        );
+        console.log(`Markers set for series '{{ series.series_name }}' on chart {{ chart_index }}`);
+
+        // Add price lines if any
+        {% for price_line in series.price_lines %}
+        chart_series_{{ chart_index }}_{{ series.series_name }}.createPriceLine({{ price_line }});
+        console.log(`Price line added to series '{{ series.series_name }}' on chart {{ chart_index }}`);
+        {% endfor %}
+      })();
+      {% endfor %}
+
+      chart_{{ chart_index }}.timeScale().fitContent();
+      console.log(`Chart {{ chart_index }} initialized and content fitted.`);
+    })();
+    {% endfor %}
+
+    // Synchronize time scales
+    charts.forEach((chart, index) => {
+      chart.timeScale().subscribeVisibleLogicalRangeChange((timeRange) => {
+        charts.forEach((otherChart, otherIndex) => {
+          if (otherIndex !== index) {
+            otherChart.timeScale().applyOptions({ rightOffset: chart.timeScale().options().rightOffset });
+            otherChart.timeScale().setVisibleLogicalRange(timeRange);
+          }
+        });
+      });
+    });
+
+    // Synchronize crosshairs
+    charts.forEach((chart, index) => {
+      chart.subscribeCrosshairMove((param) => {
+        const mainSeries = chart.mainSeries;
+        if (!param.time || param.point.x < 0 || param.point.y < 0) {
+          charts.forEach((otherChart, otherIndex) => {
+            if (otherIndex !== index) {
+              otherChart.crosshairMoved = true;
+              otherChart.clearCrosshairPosition();
+            }
+          });
+          return;
+        }
+
+        const price = param.seriesData.get(mainSeries);
+        if (price === undefined) {
+          return;
+        }
+
+        charts.forEach((otherChart, otherIndex) => {
+          if (otherIndex !== index && !otherChart.crosshairMoved) {
+            const otherSeries = otherChart.mainSeries;
+            otherChart.setCrosshairPosition(param.point.x, param.point.y, otherSeries);
+          }
+        });
+        charts.forEach((otherChart) => {
+          otherChart.crosshairMoved = false;
+        });
+      });
+    });
+
+  })();
+</script>
+"""
+
 # Initiate Model Specification.
 @dataclasses.dataclass
 class _SeriesSpec:
@@ -282,6 +413,17 @@ def _render(notebook_mode: bool,
       if notebook_mode
       else _TEMPLATE.render(chart=chart, data_url=data_url, base_url=base_url, output_div=output_div)
   )
+
+def _render_multi(notebook_mode: bool,
+                  charts: List[_ChartSpec],
+                  data_url: str = "http://127.0.0.1:5000/data",
+                  base_url: str = "https://unpkg.com/lightweight-charts/dist/",
+                  output_div: str = "vis") -> str:
+  """Render multiple models as html for viewing."""
+  return (
+      jinja2.Template(_TEMPLATES_multi).render(charts=charts, data_url=data_url, base_url=base_url, output_div=output_div)
+  )
+  
 
 
 def _encode(data: pd.DataFrame, **kwargs) -> pd.DataFrame:
@@ -478,3 +620,27 @@ class Chart:
         base_url=self.base_url,
         output_div=f'vis-{uuid.uuid4().hex}'
     )
+
+from IPython.display import display, HTML
+from jinja2 import Template
+
+def multi_chart(notebook_mode: bool = True,
+                data_url: str = "http://127.0.0.1:5000/data",
+                base_url: str = "https://unpkg.com/lightweight-charts/dist/",
+                charts: List[Chart] = None) -> str:
+  
+    # Render multi-chart HTML content
+    rendered_html = _render_multi(
+        notebook_mode=notebook_mode,
+        charts=[chart._spec() for chart in charts],
+        data_url=data_url,
+        base_url=base_url,
+        output_div=f'vis-{uuid.uuid4().hex}'
+    )
+
+    # Display HTML if in notebook mode
+    if notebook_mode:
+        display(HTML(rendered_html))
+        return None
+
+    return rendered_html

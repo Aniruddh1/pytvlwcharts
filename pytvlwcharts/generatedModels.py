@@ -232,6 +232,7 @@ class LayoutOptions(JsonOptions):
   font_family: Optional[str] = field(default=None, metadata=alias('fontFamily'))
   font_size: Optional[int] = field(default=None, metadata=alias('fontSize'))
   text_color: Optional[str] = field(default=None, metadata=alias('textColor'))
+  attribution_logo: Optional[bool] = field(default=False, metadata=alias('attributionLogo'))
 
 
 # A function used to format a{@linkBarPrice}as a string.
@@ -353,6 +354,7 @@ class PriceScaleOptions(JsonOptions):
   position: Optional[PriceAxisPosition] = None
   scale_margins: Optional[PriceScaleMargins] = field(default=None, metadata=alias('scaleMargins'))
   visible: Optional[bool] = None
+  minimum_width: Optional[int] = field(default=None, metadata=alias('minimumWidth'))
 
 
 # The `TickMarkFormatter` is used to customize tick mark labels on the time scale. This function should return `time` as a string formatted according to `tickMarkType` type (year, month, etc) and `locale`. Note that the returned string should be the shortest possible value and should have no more than 8 characters. Otherwise, the tick marks will overlap each other.

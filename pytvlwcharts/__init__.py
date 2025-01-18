@@ -13,5 +13,5 @@ __webpage__ = "https://github.com/MooneDrJune"
 __github__ = "https://github.com/TechfaneTechnologies/PyTvLwCharts"
 __license__ = "MIT"
 
-from .tvlwcharts import Chart
+from .tvlwcharts import Chart, multi_chart
 from .generatedModels import *
