@@ -65,9 +65,7 @@ _TEMPLATE = jinja2.Template("""
        row_{{ series.series_name }}.innerHTML = '<a href="https://tradingview.github.io/lightweight-charts/">Made By DrJuneMoone</a>';
        row_{{ series.series_name }}.style.color = 'orange';
        legend.appendChild(row_{{ series.series_name }});
-       const chart_series_{{ series.series_name }} = chart.add{{ series.series_type }}Series(
-         {{ series.options }}
-       );
+       const chart_series_{{ series.series_name }} = chart.addSeries(LightweightCharts.{{ series.series_type }}Series, {{ series.options }});
        chart_series_{{ series.series_name }}.setData(
          {{ series.data }}
        );
@@ -172,9 +170,7 @@ _TEMPLATES = jinja2.Template("""
        row_{{ series.series_name }}.innerHTML = '<a href="https://tradingview.github.io/lightweight-charts/">Made By DrJuneMoone</a>';
        row_{{ series.series_name }}.style.color = 'orange';
        legend.appendChild(row_{{ series.series_name }});
-       const chart_series_{{ series.series_name }} = chart.add{{ series.series_type }}Series(
-         {{ series.options }}
-       );
+       const chart_series_{{ series.series_name }} = chart.addSeries(LightweightCharts.{{ series.series_type }}Series, {{ series.options }});
        chart_series_{{ series.series_name }}.setData(
          {{ series.data }}
        );
@@ -263,7 +259,7 @@ _TEMPLATES_multi = """
 <!-- Chart Containers -->
 <div id="charts-container">
   {% for chart in charts %}
-    <div id="chart_div_{{ loop.index0 }}" style="position: relative;"></div>
+    <div id="chart_div_{{output_div}}_{{ loop.index0 }}" style="position: relative;"></div>
   {% endfor %}
 </div>
 
@@ -281,8 +277,8 @@ _TEMPLATES_multi = """
     (function() {
       {% set chart_index = loop.index0 %}
       // Get the container for this chart
-      const outputDiv = document.getElementById("chart_div_{{ chart_index }}");
-      console.log(`Creating chart in div with id: chart_div_{{ chart_index }}`);
+      const outputDiv = document.getElementById("chart_div_{{output_div}}_{{ chart_index }}");
+      console.log(`Creating chart in div with id: chart_div_{{output_div}}_{{ chart_index }}`);
 
       const chart_{{ chart_index }} = LightweightCharts.createChart(outputDiv, {{ chart.options }});
       const container = outputDiv;
@@ -304,10 +300,11 @@ _TEMPLATES_multi = """
         legend.appendChild(row_{{ chart_index }}_{{ series.series_name }});
 
         // Add series to the chart
-        const chart_series_{{ chart_index }}_{{ series.series_name }} = chart_{{ chart_index }}.add{{ series.series_type }}Series(
+        const chart_series_{{ chart_index }}_{{ series.series_name }} = chart_{{ chart_index }}.addSeries(
+          LightweightCharts.{{ series.series_type|capitalize }}Series,
           {{ series.options }}
         );
-        console.log(`Series '{{ series.series_name }}' added to chart {{ chart_index }}`);
+        console.log(`Series '{{ series.series_name }} {{series.series_type}}' added to chart {{ chart_index }}`);
 
         // Store the main series (assuming the first series is the main series)
         {% if loop.first %}
@@ -320,9 +317,7 @@ _TEMPLATES_multi = """
         );
         console.log(`Data set for series '{{ series.series_name }}' on chart {{ chart_index }}`);
 
-        chart_series_{{ chart_index }}_{{ series.series_name }}.setMarkers(
-          {{ series.markers }}
-        );
+        const chart_series_{{ chart_index }}_{{ series.series_name }}_markers = LightweightCharts.createSeriesMarkers(chart_series_{{ chart_index }}_{{ series.series_name }}, {{ series.markers }});
         console.log(`Markers set for series '{{ series.series_name }}' on chart {{ chart_index }}`);
 
         // Add price lines if any

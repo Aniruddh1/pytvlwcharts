@@ -1,0 +1,30 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0" />
+    <title>Lightweight Charts™ Customization Tutorial</title>
+    <!-- Adding the standalone version of Lightweight Charts -->
+    <script type="text/javascript" src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+      body { padding: 0; margin: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="container" style="position: absolute; width: 100%; height: 100%"></div>
+    <script type="text/javascript">
+      window.onload = function() {
+        const candleStickData = [{"time": "2019-05-23", "open": 188.45, "high": 192.54, "low": 186.27, "close": 192.0}, {"time": "2019-05-24", "open": 192.54, "high": 193.86, "low": 190.41, "close": 193.59}];
+        const chart = LightweightCharts.createChart(
+          document.getElementById('container')
+        );
+        const mainSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
+        mainSeries.setData(candleStickData);
+        window.addEventListener("resize", () => {
+          chart.resize(window.innerWidth, window.innerHeight);
+        });
+      };
+    </script>
+  </body>
+</html>
